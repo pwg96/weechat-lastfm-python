@@ -1,0 +1,2 @@
+weechat-lastfm-python
+=====================
