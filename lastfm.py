@@ -73,7 +73,7 @@ def lastfm_cmd(data, buffer, args):
                 "	print >>sys.stderr, 'Could not fetch Last.fm RSS feed.',\n"
                 "	exit()\n"
                 "json = r.json()['recenttracks']['track'][0]\n"
-                "print('{} – {} [ {} ]'.format(json['artist']['#text'].encode('utf-8'), json['name'].encode('utf-8'), json['album']['#text'].encode('utf-8'))),\n"
+                "print('{} – {} - {}'.format(json['artist']['#text'].encode('utf-8'), json['name'].encode('utf-8'), json['album']['#text'].encode('utf-8'))),\n"
                 "\"" % {"username" : weechat.config_get_plugin('lastfm_username')},
                 10000, "lastfm_cb", "")
         return weechat.WEECHAT_RC_OK
