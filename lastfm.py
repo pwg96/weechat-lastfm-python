@@ -1,3 +1,5 @@
+# coding: utf-8
+
 """
     lastfm.py
 
@@ -9,8 +11,15 @@
    license: GPLv3
 
    history:
-	   0.5   2014-05-07, Kromonos <weechat@kromonos.net>
-			 fixed some simple bugs
+       0.7 - 2016-01-29, timss <timsateroy@gmail.com>
+             Fix UnicodeEncodeError
+
+       0.6 - 2016-01-14, Lukas Martini <lutoma@ohai.su>
+             Use Last.fm API as RSS feeds are broken
+
+       0.5 - 2014-05-07, Kromonos <weechat@kromonos.net>
+             fixed some simple bugs
+
        0.4 - 2011-11-21, Jimmy Zelinskie <jimmyzelinskie@gmail.com>:
              changed default encoding to utf-8
 
@@ -26,16 +35,9 @@
 """
 
 import weechat
-import feedparser
-from apiclient.discovery import build
-from apiclient.errors import HttpError
-from oauth2client.tools import argparser
+import requests
 
-DEVELOPER_KEY = "Change Me"
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
-
-weechat.register("lastfm", "Adam Saponara", "0.5", "GPL3", "Sends your latest Last.fm track to the current buffer", "", "")
+weechat.register("lastfm", "Adam Saponara", "0.7", "GPL3", "Sends your latest Last.fm track to the current buffer", "", "")
 
 defaults = {
         "lastfm_username" : "yourusername",
@@ -59,24 +61,17 @@ def lastfm_cmd(data, buffer, args):
         cmd_buffer = buffer
         cmd_stdout = ""
         cmd_stderr = ""
-        feed = None
-        lastfm_url = 'http://ws.audioscrobbler.com/1.0/user/%(username)s/recenttracks.rss?limit=1' % {'username' : weechat.config_get_plugin('lastfm_username')}
-        feed = feedparser.parse(lastfm_url)
-        now_playing = feed['items'][0]['title'].replace(u'\u2013', '-').encode('utf-8', 'replace')
         python2_bin = weechat.info_get("python2_bin", "") or "python"
         cmd_hook_process = weechat.hook_process(
                 python2_bin + " -c \"\n"
-                "import sys, feedparser\n"
-                "feed = None\n"
-                "feed = feedparser.parse('http://ws.audioscrobbler.com/1.0/user/%(username)s/recenttracks.rss?limit=1')\n"
-                "if not feed or feed.bozo:\n"
+                "import sys, requests\n"
+                "r = requests.get('https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%(username)s&api_key=618f9ef38b3d0fed172a88c45ae67f33&format=json&limit=1&extended=0')\n"
+                "if not r.status_code == requests.codes.ok:\n"
                 "	print >>sys.stderr, 'Could not fetch Last.fm RSS feed.',\n"
-                "elif not 'items' in feed or len(feed['items']) < 1:\n"
-                "	print >>sys.stderr, 'No tracks found in Last.fm RSS feed.',\n"
-                "else:\n"
-                "	print '%(now_playing)s -',\n"
-                "	print '%(link)s',\n"
-                "\"" % {"username" : weechat.config_get_plugin('lastfm_username'), 'now_playing' : now_playing, 'link' : youtube_video(now_playing)},
+                "	exit()\n"
+                "json = r.json()['recenttracks']['track'][0]\n"
+                "print('{} – {} [ {} ]'.format(json['artist']['#text'].encode('utf-8'), json['name'].encode('utf-8'), json['album']['#text'].encode('utf-8'))),\n"
+                "\"" % {"username" : weechat.config_get_plugin('lastfm_username')},
                 10000, "lastfm_cb", "")
         return weechat.WEECHAT_RC_OK
 
@@ -91,24 +86,6 @@ def lastfm_cb(data, command, rc, stdout, stderr):
                         weechat.command(cmd_buffer, weechat.config_get_plugin("command") % cmd_stdout.replace('\n',''))
                 cmd_hook_process = ""
         return weechat.WEECHAT_RC_OK
-
-def youtube_video(options):
-  youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
-    developerKey=DEVELOPER_KEY)
-
-  search_response = youtube.search().list(
-    q=options,
-    part="id,snippet",
-    maxResults=1
-  ).execute()
-
-  videos = []
-
-  for search_result in search_response.get("items", []):
-    if search_result["id"]["kind"] == "youtube#video":
-        videos.append("http://youtube.com/watch?v=%s" % (search_result["id"]["videoId"]))
-
-  return videos[0]
 
 hook = weechat.hook_command(
         "lastfm",
