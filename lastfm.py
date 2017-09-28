@@ -11,6 +11,9 @@
    license: GPLv3
 
    history:
+       0.7.1 - 2017-09-17 pwg96 
+             Added album information
+
        0.7 - 2016-01-29, timss <timsateroy@gmail.com>
              Fix UnicodeEncodeError
 
@@ -37,7 +40,7 @@
 import weechat
 import requests
 
-weechat.register("lastfm", "Adam Saponara", "0.7", "GPL3", "Sends your latest Last.fm track to the current buffer", "", "")
+weechat.register("lastfm", "Adam Saponara", "0.7.1", "GPL3", "Sends your latest Last.fm track to the current buffer", "", "")
 
 defaults = {
         "lastfm_username" : "yourusername",
